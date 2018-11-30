@@ -5,10 +5,10 @@ clc
 poly=load('poly.mat');
 
 %% Construction encodeur Trellis
-constraint_length=poly.poly(4,3); %longueur de contrainte du code 1
-code=poly.poly(4,1:2); % G1 et G2 du code 1
+constraint_length=poly.poly(1,3); %longueur de contrainte du code 1
+code=poly.poly(1,1:2); % G1 et G2 du code 1
 
-trellis=poly2trellis(constraint_length, code); % 
+trellis=poly2trellis(constraint_length, code);
 
 
 %% Parametres
@@ -16,7 +16,7 @@ trellis=poly2trellis(constraint_length, code); %
 pqt_par_trame = 100; % Nombre de paquets par trame
 bit_par_pqt   = 330;% Nombre de bit par paquet
 
-R = trellis.numInputSymbols/trellis.numOutputSymbols; % Rendement de la communication
+R = trellis.numputSymbols/trellis.numInputSymbols; % Rendement de la communication
 K = pqt_par_trame*bit_par_pqt; % Nombre de bits de message par trame
 N = K/R; % Nombre de bits codés par trame (codée)
 
