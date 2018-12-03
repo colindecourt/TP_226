@@ -7,8 +7,8 @@ poly=load('poly.mat');
 
 %% Construction encodeur Trellis
 
-constraint_length=poly.poly(1,3); %longueur de contrainte du code 1
-code=poly.poly(1,1:2); % G1 et G2 du code 1
+constraint_length=poly.poly(4,3); %longueur de contrainte du code 1
+code=poly.poly(4,1:2); % G1 et G2 du code 1
 memoire=constraint_length-1;
 
 
@@ -17,7 +17,7 @@ encoder =comm.ConvolutionalEncoder(...
     'TrellisStructure', trellis,...
     'TerminationMethod','Truncated');
 
-dmin=distspec(trellis);
+
 %% Parametres
 % -------------------------------------------------------------------------
 pqt_par_trame = 100; % Nombre de paquets par trame
@@ -26,6 +26,7 @@ bit_par_pqt   = 330;% Nombre de bit par paquet
 R = trellis.numInputSymbols/trellis.numOutputSymbols; % Rendement de la communication
 K = pqt_par_trame*bit_par_pqt; % Nombre de bits de message par trame
 N = K/R; % Nombre de bits codés par trame (codée)
+dmin=distspec(trellis); % distance minimale
 
 M = 2; % Modulation BPSK <=> 2 symboles
 phi0 = 0; % Offset de phase our la BPSK
@@ -36,7 +37,7 @@ EbN0dB_step = 1;% Pas de EbN0
 
 nbr_erreur  = 100;  % Nombre d'erreurs à observer avant de calculer un BER
 nbr_bit_max = 100e6;% Nombre de bits max à simuler 
-ber_min     = 3e-5; % BER min
+ber_min     = 1e-6; % BER min
 
 EbN0dB = EbN0dB_min:EbN0dB_step:EbN0dB_max;     % Points de EbN0 en dB à simuler
 EbN0   = 10.^(EbN0dB/10);% Points de EbN0 à simuler
@@ -173,7 +174,7 @@ for i_snr = 1:length(EbN0dB)
 end
 fprintf('|------------|---------------|------------|----------|----------------|-----------------|--------------|\n')
 
-%%
+%% Affichage
 figure(1)
 semilogy(EbN0dB,ber);
 hold all
@@ -183,4 +184,4 @@ grid on
 xlabel('$\frac{E_b}{N_0}$ en dB','Interpreter', 'latex', 'FontSize',14)
 ylabel('TEB','Interpreter', 'latex', 'FontSize',14)
 
-save('NC.mat','EbN0dB','ber','Pb')
+save('NC4_fermé.mat','EbN0dB','ber','Pb')
