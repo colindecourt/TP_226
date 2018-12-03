@@ -1,16 +1,23 @@
 clear
 clc
+close all;
 
 
 poly=load('poly.mat');
 
 %% Construction encodeur Trellis
-constraint_length=poly.poly(4,3); %longueur de contrainte du code 1
-code=poly.poly(4,1:2); % G1 et G2 du code 1
+
+constraint_length=poly.poly(1,3); %longueur de contrainte du code 1
+code=poly.poly(1,1:2); % G1 et G2 du code 1
+memoire=constraint_length-1;
+
 
 trellis=poly2trellis(constraint_length, code); % 
+encoder =comm.ConvolutionalEncoder(...
+    'TrellisStructure', trellis,...
+    'TerminationMethod','Truncated');
 
-
+dmin=distspec(trellis);
 %% Parametres
 % -------------------------------------------------------------------------
 pqt_par_trame = 100; % Nombre de paquets par trame
@@ -67,7 +74,7 @@ awgn_channel = comm.AWGNChannel(...
 viterbi = comm.ViterbiDecoder(...
     'TrellisStructure', poly2trellis(constraint_length, code),...
     'TracebackDepth', constraint_length*5,...
-    'TerminationMethod','Terminated', ...
+    'TerminationMethod','Truncated', ...
     'InputFormat', 'Unquantized');
 
 %% Construction de l'objet évaluant le TEB
@@ -116,7 +123,7 @@ for i_snr = 1:length(EbN0dB)
         %% Emetteur
         tx_tic = tic;                 % Mesure du débit d'encodage
         msg    = randi([0,1],K,1);    % Génération du message aléatoire
-        code = convenc(msg,trellis) ; % Encodage
+        code = step(encoder,msg) ; % Encodage
         x      = step(mod_psk,  code); % Modulation QPSK
         T_tx   = T_tx+toc(tx_tic);    % Mesure du débit d'encodage
         
@@ -131,7 +138,7 @@ for i_snr = 1:length(EbN0dB)
  
         T_rx    = T_rx + toc(rx_tic);  % Mesure du débit de décodage
         
-        err_stat   = step(stat_erreur, msg, rec_msg); % Comptage des erreurs binaires
+        err_stat   = step(stat_erreur, msg, rec_msg(1:length(msg))); % Comptage des erreurs binaires
         
         %% Affichage du résultat
         if mod(n_frame,100) == 1
@@ -176,4 +183,4 @@ grid on
 xlabel('$\frac{E_b}{N_0}$ en dB','Interpreter', 'latex', 'FontSize',14)
 ylabel('TEB','Interpreter', 'latex', 'FontSize',14)
 
-save('NC.mat','EbN0dB','ber')
+save('NC.mat','EbN0dB','ber','Pb')
