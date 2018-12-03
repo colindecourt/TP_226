@@ -49,14 +49,8 @@ EsN0dB = 10*log10(EsN0); % Points de EsN0 en dB à simuler
 % -------------------------------------------------------------------------
 %% Construction de l'encodeur externe et du décodeur (RS)
 
-RSEncodeur = comm.RSEncoder(...
-    'BitInput', true,...
-    'CodewordLength', 63,...
-    'MessageLength', 55);
-RSDecodeur = comm.RSDecoder(...
-    'BitInput', true,...
-    'CodewordLength', 63,...
-    'MessageLength', 55);
+RSEncodeur = comm.RSEncoder(63,55);
+RDDecodeur = comm.RSDe
 %% Construction de l'entrelaceur et désentrelaceur
 
 H = comm.MatrixInterleaver(378,100);
@@ -139,7 +133,7 @@ for i_snr = 1:length(EbN0dB)
         %% Emetteur
         tx_tic = tic;                 % Mesure du débit d'encodage
         msg    = randi([0,1],K,1);    % Génération du message aléatoire
-        msg_RS = step(RSEncodeur,msg);
+        msg_RS = step(RSEncodeur);
         msg_entrelaceur = step(H,msg_RS);
         code = step(encoder,msg_entrelaceur) ; % Encodage
         x      = step(mod_psk,  code); % Modulation QPSK
@@ -154,7 +148,7 @@ for i_snr = 1:length(EbN0dB)
         Lc      = step(demod_psk,y);   % Démodulation (retourne des LLRs)
         Lc_chap = step(viterbi,Lc);    % Décodage de Viterbi
         C_chap = step(H_des,Lc_chap);
-        rec_msg = step(RSDecodeur,C_chap);
+        
         T_rx    = T_rx + toc(rx_tic);  % Mesure du débit de décodage
         
         err_stat   = step(stat_erreur, msg, rec_msg(1:length(msg))); % Comptage des erreurs binaires
@@ -202,4 +196,4 @@ grid on
 xlabel('$\frac{E_b}{N_0}$ en dB','Interpreter', 'latex', 'FontSize',14)
 ylabel('TEB','Interpreter', 'latex', 'FontSize',14)
 
-save('NC_intro.mat','EbN0dB','ber','Pb')
+save('NC4_fermé.mat','EbN0dB','ber','Pb')
