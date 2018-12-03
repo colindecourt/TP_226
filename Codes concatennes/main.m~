@@ -49,8 +49,14 @@ EsN0dB = 10*log10(EsN0); % Points de EsN0 en dB à simuler
 % -------------------------------------------------------------------------
 %% Construction de l'encodeur externe et du décodeur (RS)
 
-RSEncodeur = comm.RSEncoder(63,55);
-RDDecodeur = comm.RSDe
+RSEncodeur = comm.RSEncoder(...
+    'BitInput', true,...
+    'CodewordLength', 63,...
+    'MessageLength', 55);
+RSDecodeur = comm.RSDecoder(...
+    'BitInput', true,...
+    'CodewordLength', 63,...
+    'MessageLength', 55);
 %% Construction de l'entrelaceur et désentrelaceur
 
 H = comm.MatrixInterleaver(378,100);
@@ -133,9 +139,9 @@ for i_snr = 1:length(EbN0dB)
         %% Emetteur
         tx_tic = tic;                 % Mesure du débit d'encodage
         msg    = randi([0,1],K,1);    % Génération du message aléatoire
-        msg_RS = step(RSEncodeur);
-        msg_entrelaceur = step(H,msg_RS);
-        code = step(encoder,msg_entrelaceur) ; % Encodage
+        msg_RS = step(RSEncodeur,msg);
+        %msg_entrelaceur = step(H,msg_RS);
+        code = step(encoder,msg_RS) ; % Encodage
         x      = step(mod_psk,  code); % Modulation QPSK
         T_tx   = T_tx+toc(tx_tic);    % Mesure du débit d'encodage
         
@@ -147,8 +153,8 @@ for i_snr = 1:length(EbN0dB)
         rx_tic = tic;                  % Mesure du débit de décodage
         Lc      = step(demod_psk,y);   % Démodulation (retourne des LLRs)
         Lc_chap = step(viterbi,Lc);    % Décodage de Viterbi
-        C_chap = step(H_des,Lc_chap);
-        
+        %C_chap = step(H_des,Lc_chap);
+        rec_msg = step(RSDecodeur,Lc_chap);
         T_rx    = T_rx + toc(rx_tic);  % Mesure du débit de décodage
         
         err_stat   = step(stat_erreur, msg, rec_msg(1:length(msg))); % Comptage des erreurs binaires
@@ -168,6 +174,7 @@ for i_snr = 1:length(EbN0dB)
             reverseStr = repmat(sprintf('\b'), 1, msg_sz);
         end
         
+        debit_TEB = err_stat(3)/8/
     end
     
     msg = sprintf(msg_format,EbN0dB(i_snr), err_stat(3), err_stat(2), err_stat(1), err_stat(3)/8/T_tx/1e3, err_stat(3)/8/T_rx/1e3, toc(general_tic)*(100 - min(err_stat(2),100))/100);
@@ -196,4 +203,4 @@ grid on
 xlabel('$\frac{E_b}{N_0}$ en dB','Interpreter', 'latex', 'FontSize',14)
 ylabel('TEB','Interpreter', 'latex', 'FontSize',14)
 
-save('NC4_fermé.mat','EbN0dB','ber','Pb')
+save('NC_sansentrelaceur.mat','EbN0dB','ber','Pb')
