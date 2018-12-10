@@ -9,6 +9,7 @@ close all;
 % -------------------------------------------------------------------------
 pqt_par_trame = 100; % Nombre de paquets par trame
 bit_par_pqt   = 330;% Nombre de bit par paquet
+
 %% Construction encodeur Trellis
 
 constraint_length=3; %longueur de contrainte du code 1
@@ -17,7 +18,7 @@ memoire=constraint_length-1;
 
 K = pqt_par_trame*bit_par_pqt; % Nombre de bits de message par trame
 
-trellis=poly2trellis(constraint_length, code,5); 
+trellis=poly2trellis(constraint_length, code,7); 
 
 encoder =comm.ConvolutionalEncoder(...
     'TrellisStructure', trellis,...
@@ -139,10 +140,11 @@ for i_snr = 1:length(EbN0dB)
         qn = step(encoder,un_prime); %Encodage G2(z)
         
         %Poinconnage 
-        M = [ un;  pn;  un_prime;  qn];
+        M = [ pn(1:2:end)  pn(2:2:end)  qn(1:2:end)  qn(2:2:end)]';
         [ligne_M col_M] = size(M);
         [ligne_P col_P] = size(P);
-        P_rep = repmat(P,ligne_M/ligne_P);
+        P_rep = repmat(P,[1 col_M/col_P]);
+        code = M(P_rep==1);
         
         x      = step(mod_psk,  code); % Modulation QPSK
         T_tx   = T_tx+toc(tx_tic);    % Mesure du débit d'encodage
@@ -153,9 +155,15 @@ for i_snr = 1:length(EbN0dB)
         
         %% Recepteur
         rx_tic = tic;                  % Mesure du débit de décodage
-        Lc      = step(demod_psk,y);   % Démodulation (retourne des LLRs)
-        rec_msg = step(viterbi,Lc);    % Décodage de Viterbi
- 
+        M_r = zeros(size(M));
+        M_r(P_rep==1) = y;
+        
+        Lcu = M_r(1,:);
+        Lcp = M_r(2,:);
+        Lcup = M_r(3,:);
+        Lcq = M_r(4,:);
+        
+        
         T_rx    = T_rx + toc(rx_tic);  % Mesure du débit de décodage
         
         err_stat   = step(stat_erreur, msg, rec_msg(1:length(msg))); % Comptage des erreurs binaires
