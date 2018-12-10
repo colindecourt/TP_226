@@ -4,15 +4,15 @@ close all;
 
 
 
-
 %% Construction encodeur Trellis
 
-constraint_length=7; %longueur de contrainte du code 1
-code=[133 171]; % G1 et G2 du code 1
+constraint_length=3; %longueur de contrainte du code 1
+code=[7 5]; % G1 et G2 du code 1
 memoire=constraint_length-1;
 
 
-trellis=poly2trellis(constraint_length, code); % 
+trellis=poly2trellis(constraint_length, code); 
+
 encoder =comm.ConvolutionalEncoder(...
     'TrellisStructure', trellis,...
     'TerminationMethod','Truncated');
@@ -44,24 +44,11 @@ EbN0   = 10.^(EbN0dB/10);% Points de EbN0 à simuler
 EsN0   = R*log2(M)*EbN0; % Points de EsN0
 EsN0dB = 10*log10(EsN0); % Points de EsN0 en dB à simuler
 
+%Matrice de poinçonnage 
+P=[1 1 ; 1 0 ; 0 0 ; 0 1];
 
 
 % -------------------------------------------------------------------------
-%% Construction de l'encodeur externe et du décodeur (RS)
-
-RSEncodeur = comm.RSEncoder(...
-    'BitInput', true,...
-    'CodewordLength', 63,...
-    'MessageLength', 55);
-RSDecodeur = comm.RSDecoder(...
-    'BitInput', true,...
-    'CodewordLength', 63,...
-    'MessageLength', 55);
-%% Construction de l'entrelaceur et désentrelaceur
-
-H = comm.MatrixInterleaver(378,100);
-
-H_des = comm.MatrixDeinterleaver(378,100);
 
 %% Construction du modulateur
 mod_psk = comm.PSKModulator(...
@@ -95,6 +82,14 @@ viterbi = comm.ViterbiDecoder(...
 
 %% Construction de l'objet évaluant le TEB
 stat_erreur = comm.ErrorRate(); % Calcul du nombre d'erreur et du BER
+
+
+%% Construction de l'entrelaceur de type BlockInterleaver 
+
+entrelaceur = comm.MatrixInterleaver(330,100);
+
+desentrelaceur = comm.MatrixDeinterleaver(330,100);
+
 
 %% Initialisation des vecteurs de résultats
 ber = zeros(1,length(EbN0dB));
@@ -138,10 +133,17 @@ for i_snr = 1:length(EbN0dB)
         
         %% Emetteur
         tx_tic = tic;                 % Mesure du débit d'encodage
-        msg    = randi([0,1],K,1);    % Génération du message aléatoire
-        msg_RS = step(RSEncodeur,msg);
-        %msg_entrelaceur = step(H,msg_RS);
-        code = step(encoder,msg_RS) ; % Encodage
+        un    = randi([0,1],K,1);    % Génération du message aléatoire
+        un_prime = step(entrelaceur,un);
+        pn = step(encoder,un) ; % Encodage G1(z)
+        qn = step(encoder,un_prime); %Encodage G2(z)
+        
+        %Poinconnage 
+        M = [ un;  pn;  un_prime;  qn];
+        [ligne_M col_M] = size(M);
+        [ligne_P col_P] = size(P);
+        P_rep = repmat(P,ligne_M/ligne_P);
+        
         x      = step(mod_psk,  code); % Modulation QPSK
         T_tx   = T_tx+toc(tx_tic);    % Mesure du débit d'encodage
         
@@ -152,9 +154,8 @@ for i_snr = 1:length(EbN0dB)
         %% Recepteur
         rx_tic = tic;                  % Mesure du débit de décodage
         Lc      = step(demod_psk,y);   % Démodulation (retourne des LLRs)
-        Lc_chap = step(viterbi,Lc);    % Décodage de Viterbi
-        %C_chap = step(H_des,Lc_chap);
-        rec_msg = step(RSDecodeur,Lc_chap);
+        rec_msg = step(viterbi,Lc);    % Décodage de Viterbi
+ 
         T_rx    = T_rx + toc(rx_tic);  % Mesure du débit de décodage
         
         err_stat   = step(stat_erreur, msg, rec_msg(1:length(msg))); % Comptage des erreurs binaires
@@ -202,4 +203,4 @@ grid on
 xlabel('$\frac{E_b}{N_0}$ en dB','Interpreter', 'latex', 'FontSize',14)
 ylabel('TEB','Interpreter', 'latex', 'FontSize',14)
 
-save('NC_sansentrelaceur.mat','EbN0dB','ber','Pb')
+save('NC.mat','EbN0dB','ber','Pb')
