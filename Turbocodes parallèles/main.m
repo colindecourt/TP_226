@@ -179,7 +179,7 @@ for i_snr = 1:length(EbN0dB)
         
         Leup_2= zeros(33000, 1); % Entrée décodeur 1 qui vaut 0 au début 
         
-        for I=1:8
+        for I=1:3
         %  ==== 1er décodeur ====
         Lau_1=step(desentrelaceur,Leup_2)';
         conct_Lcp_Lcu=reshape([Lcu; Lcp], [], 1)'; % On met une composante d'un vecteur, puis une de l'autre, etc...
@@ -189,9 +189,9 @@ for i_snr = 1:length(EbN0dB)
         % === 2eme décodeur ===
         % Entrée
         Lcup_2= step(entrelaceur,Lcu')';
-        conct_Lcup_Lcq=reshape([Lcq; Lcup_2], [], 1)';
+        conct_Lcup_Lcq=reshape([Lcup_2; Lcq], [], 1)';
         Laup_2=step(entrelaceur,Leu_1')';
-        Leup_2=step(hAPPDec2, Laup_2', conct_Lcp_Lcu'); % Sortie décodeur 2
+        Leup_2=step(hAPPDec2, Laup_2', conct_Lcup_Lcq'); % Sortie décodeur 2
         
         
         % Sortie aprés décodage 

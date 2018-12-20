@@ -1,19 +1,22 @@
 close all
 figure(1)
-NC1= load('NC1_fermé.mat');
-NC2= load('NC2_fermé.mat');
-NC3= load('NC3_fermé.mat');
-NC4= load('NC4_fermé.mat');
-NC = load('NC.mat');
+% NC1= load('NC1_fermé.mat');
+% NC2= load('NC2_fermé.mat');
+% NC3= load('NC3_fermé.mat');
+% NC4= load('NC4_fermé.mat');
+% NC = load('NC.mat');
+NC= load('Turbo_I0.mat');
 
+
+%semilogy(Turbo_I0),
 
 semilogy(NC.EbN0dB,NC.Pb);
-hold on
-semilogy(NC1.EbN0dB,NC1.ber);
-semilogy(NC2.EbN0dB,NC2.ber);
-semilogy(NC3.EbN0dB,NC3.ber);
-semilogy(NC4.EbN0dB,NC4.ber);
-
+% hold on
+% semilogy(NC1.EbN0dB,NC1.ber);
+% semilogy(NC2.EbN0dB,NC2.ber);
+% semilogy(NC3.EbN0dB,NC3.ber);
+% semilogy(NC4.EbN0dB,NC4.ber);
+% 
 
 
 xlim([-2 10])
