@@ -253,4 +253,4 @@ grid on
 xlabel('$\frac{E_b}{N_0}$ en dB','Interpreter', 'latex', 'FontSize',14)
 ylabel('TEB','Interpreter', 'latex', 'FontSize',14)
 
-save('NC.mat','EbN0dB','ber','Pb')
+save('3_iterations.mat','EbN0dB','ber','Pb')
