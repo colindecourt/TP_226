@@ -18,7 +18,7 @@ memoire=constraint_length-1;
 
 K = pqt_par_trame*bit_par_pqt; % Nombre de bits de message par trame
 
-trellis=poly2trellis(constraint_length, code,7); 
+trellis=poly2trellis(constraint_length, code,7);
 
 encoder =comm.ConvolutionalEncoder(...
     'TrellisStructure', trellis,...
@@ -36,7 +36,7 @@ EbN0dB_max  = 10; % Maximum de EbN0
 EbN0dB_step = 1;% Pas de EbN0
 
 nbr_erreur  = 100;  % Nombre d'erreurs à observer avant de calculer un BER
-nbr_bit_max = 100e6;% Nombre de bits max à simuler 
+nbr_bit_max = 100e6;% Nombre de bits max à simuler
 ber_min     = 1e-6; % BER min
 
 EbN0dB = EbN0dB_min:EbN0dB_step:EbN0dB_max;     % Points de EbN0 en dB à simuler
@@ -44,7 +44,7 @@ EbN0   = 10.^(EbN0dB/10);% Points de EbN0 à simuler
 EsN0   = R*log2(M)*EbN0; % Points de EsN0
 EsN0dB = 10*log10(EsN0); % Points de EsN0 en dB à simuler
 
-%Matrice de poinçonnage 
+%Matrice de poinçonnage
 P=[1 1 ; 1 0 ; 0 0 ; 0 1];
 
 
@@ -85,13 +85,13 @@ viterbi = comm.ViterbiDecoder(...
 stat_erreur = comm.ErrorRate(); % Calcul du nombre d'erreur et du BER
 
 
-%% Construction de l'entrelaceur de type BlockInterleaver 
+%% Construction de l'entrelaceur de type BlockInterleaver
 
 entrelaceur = comm.MatrixInterleaver(330,100);
 
 desentrelaceur = comm.MatrixDeinterleaver(330,100);
 
-%% Construction des décodeurs 
+%% Construction des décodeurs
 hAPPDec1=comm.APPDecoder(...
     'TrellisStructure',trellis,...
     'TerminationMethod', 'Truncated',...
@@ -103,8 +103,8 @@ hAPPDec2=comm.APPDecoder(...
     'TerminationMethod', 'Truncated',...
     'Algorithm','True APP',...
     'CodedBitLLROutputPort', false);
-    
-    
+
+
 %% Initialisation des vecteurs de résultats
 ber = zeros(1,length(EbN0dB));
 Pb = qfunc(sqrt(2*EbN0));
@@ -130,10 +130,10 @@ fprintf(      '|------------|---------------|------------|----------|-----------
 
 %% Simulation
 for i_snr = 1:length(EbN0dB)
-    reverseStr = ''; % Pour affichage en console
-    awgn_channel.EsNo = EsN0dB(i_snr);% Mise a jour du EbN0 pour le canal
+    reverseStr = '';                   % Pour affichage en console
+    awgn_channel.EsNo = EsN0dB(i_snr); % Mise a jour du EbN0 pour le canal
     
-    stat_erreur.reset; % reset du compteur d'erreur
+    stat_erreur.reset;     % reset du compteur d'erreur
     err_stat    = [0 0 0]; % vecteur résultat de stat_erreur
     
     demod_psk.Variance = awgn_channel.Variance;
@@ -147,20 +147,31 @@ for i_snr = 1:length(EbN0dB)
         
         %% Emetteur
         tx_tic = tic;                 % Mesure du débit d'encodage
-        un    = randi([0,1],K,1);    % Génération du message aléatoire
-        un_prime = step(entrelaceur,un);
-        pn = step(encoder,un) ; % Encodage G1(z)
-        qn = step(encoder,un_prime); %Encodage G2(z)
+        un    = randi([0,1],K,1);     % Génération du message aléatoire
         
-        %Poinconnage 
-        M = [ un  pn(2:2:end)  un_prime  qn(2:2:end)]';
-        [ligne_M col_M] = size(M);
-        [ligne_P col_P] = size(P);
-        P_rep = repmat(P,[1 col_M/col_P]);
-        code = M(P_rep==1);
+        % == Encodeur ==
         
+        % RSC1
+        un_pn = step(encoder,un) ;    % Encodage G1(z) -> Il ressort un et pn intercalés
+        pn= un_pn(2:2:end);           % pn est les éléments pairs du vecteur un_pn
+        
+        % RSC2
+        unp = step(entrelaceur,un);   % un' résulte de l'entrelaçage de un
+        unp_qn = step(encoder,unp);   % Encodage G2(z) -> Il ressort un et qn intercalés
+        qn=unp_qn(2:2:end);           % qn est les éléments pairs du vecteur un_qn
+        
+        % == Matrice M après encodage ==
+        M = [ un pn unp qn]';
+        
+        % == Poiçonnage ==
+        [ligne_M col_M] = size(M);          % Récupération de la taille de M
+        [ligne_P col_P] = size(P);          % Récupération de la taille de P
+        P_rep = repmat(P,[1 col_M/col_P]);  % Matrice de poiçonnage de la taille de M
+        code = M(P_rep==1);                 % Poiçonnage
+        
+        % == Modulation et débit encodage ==
         x      = step(mod_psk,  code); % Modulation QPSK
-        T_tx   = T_tx+toc(tx_tic);    % Mesure du débit d'encodage
+        T_tx   = T_tx+toc(tx_tic);     % Mesure du débit d'encodage
         
         
         %% Canal
@@ -168,47 +179,49 @@ for i_snr = 1:length(EbN0dB)
         
         %% Recepteur
         rx_tic = tic;                  % Mesure du débit de décodage
-        y     = step(demod_psk,  y1); % Modulation QPSK
-        M_r = zeros(size(M));
-        M_r(P_rep==1) = -y;
+        y     = step(demod_psk,  y1);  % Modulation QPSK
+        M_r = zeros(size(M));          % Matrice M reçue initialiée à 0
+        M_r(P_rep==1) = -y;             % Dépoiçonnage
         
+        % Récupération des données de M reçue après poiçonnage
         Lcu = M_r(1,:);
         Lcp = M_r(2,:);
-        Lcup = M_r(3,:);
+        Lcup= step(entrelaceur,Lcu')'; % Lcup est obtenu par entrelaçage de Lcu
         Lcq = M_r(4,:);
         
-        Leup_2= zeros(33000, 1); % Entrée décodeur 1 qui vaut 0 au début 
         
-        for I=1:3
-        %  ==== 1er décodeur ====
-        Lau_1=step(desentrelaceur,Leup_2)';
-        conct_Lcp_Lcu=reshape([Lcu; Lcp], [], 1)'; % On met une composante d'un vecteur, puis une de l'autre, etc...
-        Leu_1=step(hAPPDec1, Lau_1', conct_Lcp_Lcu')'; % Sortie du premier décodeur
+        % Entrées décodeur 1
+        Leup_2= zeros(33000, 1);                     % Entrée La_1 du décodeur 1 qui vaut 0 au début
+        conct_Lcp_Lcu=reshape([Lcu; Lcp], [], 1)';   % Entrée Lc du décodeur 1: concaténation de Lcp et Lcu en mettant la composante d'un vecteur, puis une de l'autre, etc...
         
-        
-        % === 2eme décodeur ===
-        % Entrée
-        Lcup_2= step(entrelaceur,Lcu')';
-        conct_Lcup_Lcq=reshape([Lcup_2; Lcq], [], 1)';
-        Laup_2=step(entrelaceur,Leu_1')';
-        Leup_2=step(hAPPDec2, Laup_2', conct_Lcup_Lcq'); % Sortie décodeur 2
+        % Entrée décodeur 2
+        conct_Lcup_Lcq=reshape([Lcup; Lcq], [], 1)'; % Entrée Lc du décodeur 2
         
         
-        % Sortie aprés décodage 
-        Lau_1=step(desentrelaceur,Leup_2);
-        end 
+        for i=1:8
+            
+            %  ==== 1er décodeur ====
+            Lau_1=step(desentrelaceur,Leup_2)';            % Entrée
+            Leu_1=step(hAPPDec1, Lau_1', conct_Lcp_Lcu')'; % Sortie décodeur 1
+            
+            
+            % === 2eme décodeur ===
+            Laup_2=step(entrelaceur,Leu_1')';                % Entrée
+            Leup_2=step(hAPPDec2, Laup_2', conct_Lcup_Lcq'); % Sortie décodeur 2
+            
+        end
         
-        L1= Lau_1'+Leu_1+Lcu;
-       
+        L1= Lau_1+Leu_1+Lcu;
+        
         T_rx    = T_rx + toc(rx_tic);  % Mesure du débit de décodage
-       
-         % Decision 
+        
+        % Decision
         rec_msg=double(-L1<0)';
         msg=un;
         err_stat   = step(stat_erreur, msg, rec_msg(1:length(msg))); % Comptage des erreurs binaires
         
         
-       
+        
         
         %% Affichage du résultat
         if mod(n_frame,100) == 1
